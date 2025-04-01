@@ -10,7 +10,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 const CartPage = () => {
-  const { cart, cartTotal, clearCart } = useApp();
+  const { cart, cartTotal, clearCart, user } = useApp();
   const navigate = useNavigate();
   
   // Constants for calculations
@@ -19,9 +19,11 @@ const CartPage = () => {
   const orderTotal = cartTotal + shipping + tax;
   
   const handleCheckout = () => {
-    // In a real app, this would redirect to the checkout process
-    // For now, we'll just navigate to a placeholder
-    navigate('/checkout');
+    if (!user) {
+      navigate('/login', { state: { from: '/checkout' } });
+    } else {
+      navigate('/checkout');
+    }
   };
 
   return (

@@ -24,13 +24,6 @@ export const signInWithEmail = async (email: string, password: string) => {
   return { data, error };
 };
 
-export const signInWithGoogle = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-  });
-  return { data, error };
-};
-
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
   return { error };
@@ -82,7 +75,15 @@ export const getUserProfile = async (userId: string) => {
 export const createOrder = async (orderData: any) => {
   const { data, error } = await supabase
     .from('orders')
-    .insert([orderData]);
+    .insert([orderData])
+    .select();
+  return { data, error };
+};
+
+export const createOrderItems = async (orderItems: any[]) => {
+  const { data, error } = await supabase
+    .from('order_items')
+    .insert(orderItems);
   return { data, error };
 };
 
