@@ -59,7 +59,8 @@ export const getProduct = async (id: string) => {
 export const createOrUpdateUserProfile = async (userData: any) => {
   const { data, error } = await supabase
     .from('profiles')
-    .upsert([userData], { onConflict: 'id' });
+    .upsert([userData])
+    .select();
   return { data, error };
 };
 
