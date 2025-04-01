@@ -12,6 +12,13 @@ export const signUpWithEmail = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      // In development, we can bypass the email confirmation
+      emailRedirectTo: window.location.origin,
+      data: {
+        // Optional user metadata
+      }
+    }
   });
   return { data, error };
 };

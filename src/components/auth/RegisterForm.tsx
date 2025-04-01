@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { signUpWithEmail } from '@/lib/supabase';
+import { signUpWithEmail, signInWithEmail } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 
 const RegisterForm = () => {
@@ -51,13 +51,27 @@ const RegisterForm = () => {
       const { data, error } = await signUpWithEmail(email, password);
       
       if (error) throw error;
-      
-      toast({
-        title: "Registration successful",
-        description: "Please check your email to verify your account before logging in.",
-      });
-      
-      navigate('/login');
+
+      // Try to automatically sign in after registration
+      if (data) {
+        const { error: signInError } = await signInWithEmail(email, password);
+        
+        if (signInError) {
+          // If auto-sign in fails, redirect to login with a message
+          toast({
+            title: "Registration successful",
+            description: "Please log in with your new account.",
+          });
+          navigate('/login');
+        } else {
+          // Successfully signed in
+          toast({
+            title: "Welcome!",
+            description: "Your account has been created and you're now logged in.",
+          });
+          navigate('/');
+        }
+      }
     } catch (error: any) {
       console.error('Registration error:', error);
       toast({

@@ -37,6 +37,9 @@ export interface RazorpayOrderOptions {
     email?: string;
     contact?: string;
   };
+  notes?: {
+    [key: string]: string;
+  };
 }
 
 // Initialize and open Razorpay payment
@@ -46,12 +49,13 @@ export const initiatePayment = async (options: RazorpayOrderOptions): Promise<an
   return new Promise((resolve, reject) => {
     const razorpayOptions = {
       key: KEY_ID,
-      amount: options.amount * 100, // Razorpay expects amount in paise
+      amount: options.amount, // Amount is already in paise
       currency: options.currency || 'INR',
       name: options.name,
       description: options.description || 'Purchase',
       order_id: options.orderId, // This would come from your backend
       prefill: options.prefillData || {},
+      notes: options.notes || {},
       handler: (response: any) => {
         resolve(response);
       },
