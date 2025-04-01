@@ -1,11 +1,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// These environment variables are auto-injected by the Supabase integration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Import the client configuration from our integration file
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Re-export the preconfigured client
+export const supabase = supabaseClient;
 
 // Auth helpers
 export const signUpWithEmail = async (email: string, password: string) => {
