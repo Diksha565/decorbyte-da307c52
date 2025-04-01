@@ -7,14 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { useCart } from '@/context/CartContext';
+import { useApp } from '@/context/AppContext';
 import { initiatePayment } from '@/lib/razorpay';
 import { createOrder, createOrderItems, supabase } from '@/lib/supabase';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 const CheckoutPage = () => {
-  const { cart, calculateTotal, clearCart } = useCart();
+  const { cart, cartTotal, clearCart, user } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,17 +23,14 @@ const CheckoutPage = () => {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [postalCode, setPostalCode] = useState('');
-  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const cartTotal = calculateTotal();
 
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
       
       if (data.session?.user) {
-        setUser(data.session.user);
         setEmail(data.session.user.email || '');
       } else {
         toast({
@@ -98,9 +95,9 @@ const CheckoutPage = () => {
       // Create order items
       const orderItems = cart.map(item => ({
         order_id: orderId,
-        product_id: item.id,
+        product_id: item.product.id,
         quantity: item.quantity,
-        price: item.price
+        price: item.product.price
       }));
       
       const { error: itemsError } = await createOrderItems(orderItems);
@@ -109,14 +106,17 @@ const CheckoutPage = () => {
       
       // Call Razorpay
       const options = {
-        amount: cartTotal,
+        amount: cartTotal * 100, // Convert to smallest currency unit (paise)
         currency: 'INR',
-        name: 'Modern E-commerce',
+        name: 'DecorByte',
         description: `Order #${orderId}`,
         prefillData: {
           name,
           email,
           contact: phone
+        },
+        notes: {
+          order_id: orderId
         }
       };
       
@@ -273,10 +273,10 @@ const CheckoutPage = () => {
                 {cart.map((item) => (
                   <div key={item.id} className="flex justify-between">
                     <div>
-                      <p className="font-medium">{item.name}</p>
+                      <p className="font-medium">{item.product.name}</p>
                       <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                     </div>
-                    <p className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-medium">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
