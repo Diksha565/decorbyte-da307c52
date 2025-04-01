@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,49 @@ const ProductPage = () => {
     const value = parseInt(e.target.value);
     if (!isNaN(value) && value > 0 && product && value <= product.inventory) {
       setQuantity(value);
+    }
+  };
+
+  // Add the missing handleWishlistToggle function
+  const handleWishlistToggle = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add items to your wishlist",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!product) return;
+    
+    setWishlistLoading(true);
+    
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(user.id, product.id);
+        setIsWishlisted(false);
+        toast({
+          title: "Removed from wishlist",
+          description: `${product.name} has been removed from your wishlist.`
+        });
+      } else {
+        await addToWishlist(user.id, product.id);
+        setIsWishlisted(true);
+        toast({
+          title: "Added to wishlist",
+          description: `${product.name} has been added to your wishlist.`
+        });
+      }
+    } catch (error) {
+      console.error('Wishlist error:', error);
+      toast({
+        title: "Action failed",
+        description: "There was an error updating your wishlist.",
+        variant: "destructive"
+      });
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
