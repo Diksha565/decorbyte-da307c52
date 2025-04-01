@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 // Import the client configuration from our integration file
@@ -80,6 +79,7 @@ export const getUserProfile = async (userId: string) => {
   return { data, error };
 };
 
+// Update the createOrder function to handle inventory updates
 export const createOrder = async (orderData: any) => {
   const { data, error } = await supabase
     .from('orders')
@@ -88,10 +88,36 @@ export const createOrder = async (orderData: any) => {
   return { data, error };
 };
 
+// Update the createOrderItems function to handle inventory updates
 export const createOrderItems = async (orderItems: any[]) => {
   const { data, error } = await supabase
     .from('order_items')
     .insert(orderItems);
+    
+  // If order items were successfully created, update product inventory
+  if (!error && orderItems.length > 0) {
+    // For each item, reduce the inventory
+    for (const item of orderItems) {
+      // Get current product
+      const { data: product } = await supabase
+        .from('products')
+        .select('inventory')
+        .eq('id', item.product_id)
+        .single();
+      
+      if (product) {
+        // Calculate new inventory
+        const newInventory = Math.max(0, product.inventory - item.quantity);
+        
+        // Update inventory
+        await supabase
+          .from('products')
+          .update({ inventory: newInventory })
+          .eq('id', item.product_id);
+      }
+    }
+  }
+  
   return { data, error };
 };
 

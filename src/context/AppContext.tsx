@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
@@ -57,7 +56,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for existing session on load
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -67,7 +65,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             email: session.user.email || '',
           });
           
-          // Fetch user profile
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
@@ -78,7 +75,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setProfile(profileData);
           }
           
-          // Load cart from localStorage
           const savedCart = localStorage.getItem('decorbyte_cart');
           if (savedCart) {
             setCart(JSON.parse(savedCart));
@@ -91,7 +87,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -100,7 +95,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             email: session.user.email || '',
           });
           
-          // Fetch or create user profile
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
@@ -110,7 +104,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (profileData && !error) {
             setProfile(profileData);
           } else {
-            // Create profile if doesn't exist
             await supabase.from('profiles').insert([
               { id: session.user.id, email: session.user.email }
             ]);
@@ -133,7 +126,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('decorbyte_cart', JSON.stringify(cart));
   }, [cart]);
@@ -142,7 +134,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (product.inventory < quantity) {
       toast({
         title: "Insufficient stock",
-        description: "We don't have that many items in stock.",
+        description: `Only ${product.inventory} items available.`,
         variant: "destructive"
       });
       return;
@@ -152,19 +144,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const existingItemIndex = prevCart.findIndex(item => item.product.id === product.id);
       
       if (existingItemIndex !== -1) {
-        // Check if there's enough inventory for the update
         const newQuantity = prevCart[existingItemIndex].quantity + quantity;
         
         if (newQuantity > product.inventory) {
           toast({
             title: "Insufficient stock",
-            description: "We don't have that many items in stock.",
+            description: `Only ${product.inventory} items available. You already have ${prevCart[existingItemIndex].quantity} in your cart.`,
             variant: "destructive"
           });
           return prevCart;
         }
         
-        // Update existing item
         const newCart = [...prevCart];
         newCart[existingItemIndex] = {
           ...newCart[existingItemIndex],
@@ -178,7 +168,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         return newCart;
       } else {
-        // Add new item
         toast({
           title: "Added to cart",
           description: `${product.name} added to your cart.`,
@@ -208,7 +197,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (existingItemIndex === -1) return prevCart;
       
-      // Check inventory
       const product = prevCart[existingItemIndex].product;
       if (quantity > product.inventory) {
         toast({
@@ -220,11 +208,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       
       if (quantity <= 0) {
-        // Remove item if quantity is 0 or negative
         return prevCart.filter(item => item.product.id !== productId);
       }
       
-      // Update quantity
       const newCart = [...prevCart];
       newCart[existingItemIndex] = {
         ...newCart[existingItemIndex],
@@ -243,13 +229,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  // Calculate cart total
   const cartTotal = cart.reduce(
     (total, item) => total + item.product.price * item.quantity, 
     0
   );
   
-  // Calculate total items in cart
   const totalItems = cart.reduce(
     (total, item) => total + item.quantity, 
     0

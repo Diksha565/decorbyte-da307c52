@@ -1,19 +1,86 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp, Product } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Heart } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import { addToWishlist, removeFromWishlist, getUserWishlist } from '@/lib/supabase';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { addToCart } = useApp();
+  const { addToCart, user } = useApp();
+  const { toast } = useToast();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const isOutOfStock = product.inventory <= 0;
+
+  useEffect(() => {
+    // Check if product is in wishlist when user or product changes
+    const checkWishlist = async () => {
+      if (!user) {
+        setIsWishlisted(false);
+        return;
+      }
+      
+      try {
+        const { data } = await getUserWishlist(user.id);
+        if (data) {
+          const isInWishlist = data.some(item => item.product_id === product.id);
+          setIsWishlisted(isInWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist:', error);
+      }
+    };
+    
+    checkWishlist();
+  }, [user, product.id]);
+
+  const handleWishlistToggle = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add items to your wishlist",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(user.id, product.id);
+        setIsWishlisted(false);
+        toast({
+          title: "Removed from wishlist",
+          description: `${product.name} has been removed from your wishlist.`
+        });
+      } else {
+        await addToWishlist(user.id, product.id);
+        setIsWishlisted(true);
+        toast({
+          title: "Added to wishlist",
+          description: `${product.name} has been added to your wishlist.`
+        });
+      }
+    } catch (error) {
+      console.error('Wishlist error:', error);
+      toast({
+        title: "Action failed",
+        description: "There was an error updating your wishlist.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="product-card group animate-fade-in">
@@ -42,8 +109,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 {formatCurrency(product.price)}
               </p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Heart size={18} className="text-muted-foreground hover:text-accent" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={handleWishlistToggle}
+              disabled={isLoading}
+            >
+              <Heart 
+                size={18} 
+                className={isWishlisted ? "fill-red-500 text-red-500" : "text-muted-foreground hover:text-accent"} 
+              />
             </Button>
           </div>
         </div>

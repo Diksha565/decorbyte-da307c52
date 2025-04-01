@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import { formatCurrency } from '@/lib/utils';
 import { ArrowLeft, Heart, ShoppingCart, Truck, Shield, Package, AlertTriangle, Plus, Minus } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { addToWishlist, removeFromWishlist, getUserWishlist } from '@/lib/supabase';
+import { useToast } from '@/components/ui/use-toast';
 
 const ProductPage = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -18,8 +19,11 @@ const ProductPage = () => {
   const [activeImage, setActiveImage] = useState(0);
   const { addToCart } = useApp();
   const navigate = useNavigate();
+  const { user } = useApp();
+  const { toast } = useToast();
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
-  // Mock additional images (in a real app, these would come from the database)
   const additionalImages = [
     'https://images.unsplash.com/photo-1593640495253-23196b27a87f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=800&q=80',
     'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=800&q=80',
@@ -48,6 +52,24 @@ const ProductPage = () => {
     fetchProduct();
   }, [productId]);
 
+  useEffect(() => {
+    const checkWishlist = async () => {
+      if (!user || !product) return;
+      
+      try {
+        const { data } = await getUserWishlist(user.id);
+        if (data) {
+          const isInWishlist = data.some(item => item.product_id === product.id);
+          setIsWishlisted(isInWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist:', error);
+      }
+    };
+    
+    checkWishlist();
+  }, [user, product]);
+
   const handleAddToCart = () => {
     if (product) {
       addToCart(product, quantity);
@@ -73,7 +95,6 @@ const ProductPage = () => {
     }
   };
 
-  // Show a loading state while fetching the product
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -96,7 +117,6 @@ const ProductPage = () => {
     );
   }
 
-  // Show a message if the product is not found
   if (!product) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -115,7 +135,6 @@ const ProductPage = () => {
     );
   }
 
-  // Get all product images
   const allImages = [product.image_url, ...additionalImages];
   const isOutOfStock = product.inventory <= 0;
 
@@ -124,7 +143,6 @@ const ProductPage = () => {
       <Header />
       <main className="flex-grow py-8">
         <div className="container-custom">
-          {/* Breadcrumb & Back */}
           <div className="flex items-center mb-6">
             <Button
               variant="ghost"
@@ -146,9 +164,7 @@ const ProductPage = () => {
             </nav>
           </div>
 
-          {/* Product Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Product Images */}
             <div className="space-y-4">
               <div className="bg-secondary rounded-lg overflow-hidden aspect-square">
                 <img
@@ -158,7 +174,6 @@ const ProductPage = () => {
                 />
               </div>
               
-              {/* Thumbnail Gallery */}
               <div className="grid grid-cols-4 gap-2">
                 {allImages.map((image, index) => (
                   <button
@@ -178,14 +193,12 @@ const ProductPage = () => {
               </div>
             </div>
 
-            {/* Product Info */}
             <div>
               <h1 className="text-3xl font-display mb-2">{product.name}</h1>
               <p className="text-2xl font-medium mb-4">
                 {formatCurrency(product.price)}
               </p>
               
-              {/* Stock Status */}
               {isOutOfStock ? (
                 <div className="bg-destructive/10 text-destructive text-sm px-3 py-1 rounded-full inline-flex items-center mb-4">
                   <AlertTriangle size={14} className="mr-1" />
@@ -207,7 +220,6 @@ const ProductPage = () => {
                 <p>{product.description}</p>
               </div>
               
-              {/* Add to Cart */}
               {!isOutOfStock && (
                 <div className="space-y-4">
                   <div className="flex items-center">
@@ -250,14 +262,18 @@ const ProductPage = () => {
                       <ShoppingCart size={16} className="mr-2" />
                       Add to Cart
                     </Button>
-                    <Button variant="outline" size="icon">
-                      <Heart size={16} />
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={handleWishlistToggle}
+                      disabled={wishlistLoading}
+                    >
+                      <Heart size={16} className={isWishlisted ? "fill-red-500 text-red-500" : ""} />
                     </Button>
                   </div>
                 </div>
               )}
               
-              {/* Shipping & Returns */}
               <div className="border-t border-border mt-8 pt-6 space-y-4">
                 <div className="flex">
                   <div className="mr-3">
@@ -298,7 +314,6 @@ const ProductPage = () => {
             </div>
           </div>
 
-          {/* Product Details & Specs - Can be expanded in future iterations */}
           <div className="mt-12">
             <h2 className="text-2xl font-display mb-6">Product Details</h2>
             
