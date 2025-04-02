@@ -87,6 +87,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setImageError(true);
   };
 
+  // Fallback images for different categories
+  const getFallbackImage = () => {
+    const fallbacks = {
+      furniture: '/lovable-uploads/ac4decf7-36a9-4f60-9b53-3b5aaec7ddd5.png',
+      lighting: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=800&h=600&q=80',
+      showpieces: 'https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?auto=format&fit=crop&w=800&h=600&q=80',
+      decor: 'https://images.unsplash.com/photo-1499955085172-a104c9463ece?auto=format&fit=crop&w=800&h=600&q=80',
+      wallpapers: 'https://images.unsplash.com/photo-1557683311-eac922347aa1?auto=format&fit=crop&w=800&h=600&q=80'
+    };
+    
+    return fallbacks[product.category] || '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+  };
+
   return (
     <div className="product-card group animate-fade-in border rounded-md overflow-hidden bg-white hover:shadow-md transition-shadow">
       {/* Product image */}
@@ -100,9 +113,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               onError={handleImageError}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              No image available
-            </div>
+            <img 
+              src={getFallbackImage()}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform hover:scale-105"
+            />
           )}
         </div>
       </Link>

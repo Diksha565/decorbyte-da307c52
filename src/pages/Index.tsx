@@ -14,7 +14,7 @@ const categories = [
     id: 'furniture',
     name: 'Furniture',
     description: 'Timeless pieces that define your space',
-    image: 'https://images.unsplash.com/photo-1540932239986-30128078f3c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600&q=80',
+    image: '/lovable-uploads/ac4decf7-36a9-4f60-9b53-3b5aaec7ddd5.png',
   },
   {
     id: 'lighting',
@@ -68,6 +68,14 @@ const heroSlides = [
     altText: 'Elegant furniture in modern home',
   },
 ];
+
+// Updated inspiration images with reliable sources
+const inspirationImages = {
+  livingRoom: 'https://images.unsplash.com/photo-1600210492493-0946911123ea?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=400&q=80',
+  kitchen: 'https://images.unsplash.com/photo-1616137422495-1e9e46e2aa77?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=300&q=80',
+  bedroom: '/lovable-uploads/f429e2fb-813c-4e1a-8236-6db04b2f8d77.png',
+  office: 'https://images.unsplash.com/photo-1616593658833-4e3db17a8c8f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=400&q=80'
+};
 
 const Index = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -171,6 +179,10 @@ const Index = () => {
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
                     style={{ backgroundImage: `url(${category.image})` }}
+                    onError={(e) => {
+                      // Fallback image if the category image fails to load
+                      (e.target as HTMLElement).style.backgroundImage = `url(/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png)`;
+                    }}
                   ></div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/10 flex flex-col justify-end p-6">
                     <h3 className="text-xl font-medium text-white mb-1">{category.name}</h3>
@@ -222,26 +234,38 @@ const Index = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <img
-                    src="https://images.unsplash.com/photo-1600210492493-0946911123ea?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&h=400&q=80"
+                    src={inspirationImages.livingRoom}
                     alt="Living room inspiration"
                     className="rounded-lg object-cover w-full h-48"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+                    }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1616137422495-1e9e46e2aa77?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&h=300&q=80"
+                    src={inspirationImages.kitchen}
                     alt="Kitchen inspiration"
                     className="rounded-lg object-cover w-full h-32"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+                    }}
                   />
                 </div>
                 <div className="space-y-4">
                   <img
-                    src="https://images.unsplash.com/photo-1617325710236-4a36ca7f6ba0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&h=300&q=80"
+                    src={inspirationImages.bedroom}
                     alt="Bedroom inspiration"
                     className="rounded-lg object-cover w-full h-32"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+                    }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1616593658833-4e3db17a8c8f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&h=400&q=80"
+                    src={inspirationImages.office}
                     alt="Office inspiration"
                     className="rounded-lg object-cover w-full h-48"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+                    }}
                   />
                 </div>
               </div>

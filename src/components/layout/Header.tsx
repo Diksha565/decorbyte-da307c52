@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { signOut } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { Product } from '@/context/AppContext';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const categories = [
   { name: 'Furniture', path: '/category/furniture' },
@@ -41,39 +41,47 @@ const Header = () => {
   const navigate = useNavigate();
   const { user, cart } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { toast } = useToast();
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
   
-  const handleSearch = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const performSearch = async () => {
+      if (debouncedSearchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .or(`name.ilike.%${debouncedSearchQuery}%,description.ilike.%${debouncedSearchQuery}%`)
+          .eq('active', true)
+          .limit(10);
+          
+        if (error) throw error;
+        setSearchResults(data || []);
+        setIsSearchOpen(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      }
+    };
+
+    performSearch();
+  }, [debouncedSearchQuery]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (searchQuery.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
-        .eq('active', true)
-        .limit(10);
-        
-      if (error) throw error;
-      setSearchResults(data || []);
-      setIsSearchOpen(true);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    }
   };
 
   const handleSearchSelect = (productId: string) => {
     setIsSearchOpen(false);
+    setSearchQuery('');
     navigate(`/product/${productId}`);
   };
 
@@ -94,7 +102,6 @@ const Header = () => {
     }
   };
 
-  // Get first initials for avatar fallback
   const getUserInitials = () => {
     if (!user) return 'U';
     return user.email?.charAt(0).toUpperCase() || 'U';
@@ -104,12 +111,10 @@ const Header = () => {
     <header className="bg-background border-b border-border sticky top-0 z-40">
       <div className="container-custom py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
           <Link to="/" className="font-display text-2xl tracking-tight">
             decorbyte
           </Link>
 
-          {/* Main Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {categories.map((category) => (
               <Link
@@ -122,7 +127,6 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Mobile Navigation */}
           <NavigationMenu className="md:hidden">
             <NavigationMenuList>
               <NavigationMenuItem>
@@ -149,9 +153,7 @@ const Header = () => {
             </NavigationMenuList>
           </NavigationMenu>
 
-          {/* Action Icons */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
             <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -164,7 +166,7 @@ const Header = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end">
-                <form onSubmit={handleSearch} className="flex items-center border-b p-2">
+                <form onSubmit={handleSearchSubmit} className="flex items-center border-b p-2">
                   <Search className="h-4 w-4 mr-2 flex-shrink-0 opacity-50" />
                   <Input
                     placeholder="Search products..."
@@ -172,9 +174,6 @@ const Header = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
-                  <Button type="submit" variant="ghost" size="sm">
-                    Search
-                  </Button>
                 </form>
                 {searchResults.length > 0 && (
                   <div className="max-h-[300px] overflow-auto p-2">
@@ -189,6 +188,16 @@ const Header = () => {
                             src={product.image_url}
                             alt={product.name}
                             className="w-10 h-10 object-cover rounded mr-3"
+                            onError={(e) => {
+                              const fallbacks = {
+                                furniture: '/lovable-uploads/ac4decf7-36a9-4f60-9b53-3b5aaec7ddd5.png',
+                                lighting: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=800&h=600&q=80',
+                                showpieces: 'https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?auto=format&fit=crop&w=800&h=600&q=80',
+                                decor: 'https://images.unsplash.com/photo-1499955085172-a104c9463ece?auto=format&fit=crop&w=800&h=600&q=80',
+                                wallpapers: 'https://images.unsplash.com/photo-1557683311-eac922347aa1?auto=format&fit=crop&w=800&h=600&q=80'
+                              };
+                              (e.target as HTMLImageElement).src = fallbacks[product.category] || '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+                            }}
                           />
                         )}
                         <div>
@@ -219,7 +228,6 @@ const Header = () => {
               <Heart className="h-5 w-5" />
             </Button>
 
-            {/* User profile with dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
