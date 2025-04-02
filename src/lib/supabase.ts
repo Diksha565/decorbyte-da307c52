@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 
 // Import the client configuration from our integration file
@@ -122,11 +123,14 @@ export const createOrderItems = async (orderItems: any[]) => {
 };
 
 export const getUserOrders = async (userId: string) => {
+  console.log(`Fetching orders for user ID: ${userId}`);
   const { data, error } = await supabase
     .from('orders')
     .select('*, order_items(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  
+  console.log('User orders query result:', { data, error });
   return { data, error };
 };
 

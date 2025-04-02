@@ -1,20 +1,32 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/context/AppContext';
 import { getUserProfile, createOrUpdateUserProfile, getUserOrders } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/lib/utils';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { ChevronRight } from 'lucide-react';
+
+type OrderType = {
+  id: string;
+  status: string;
+  total: number;
+  created_at: string;
+  order_items: any[];
+};
 
 const ProfilePage = () => {
   const { user, isLoading } = useApp();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [profile, setProfile] = useState({
     first_name: '',
@@ -27,7 +39,7 @@ const ProfilePage = () => {
     country: '',
   });
   
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -72,7 +84,7 @@ const ProfilePage = () => {
         const { data, error } = await getUserOrders(user.id);
         
         if (error) throw error;
-        
+        console.log('Orders data:', data);
         setOrders(data || []);
       } catch (error) {
         console.error('Error fetching orders:', error);
@@ -130,6 +142,30 @@ const ProfilePage = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
+      case 'processing':
+        return <Badge className="bg-blue-100 text-blue-800">Processing</Badge>;
+      case 'pending':
+        return <Badge className="bg-amber-100 text-amber-800">Pending</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
     }
   };
 
@@ -285,10 +321,32 @@ const ProfilePage = () => {
                     </div>
                   ) : orders.length > 0 ? (
                     <div className="space-y-4">
-                      {/* Replace with actual orders once we have them */}
-                      <p className="text-muted-foreground text-center py-4">
-                        You haven't placed any orders yet.
-                      </p>
+                      {orders.map((order) => (
+                        <div key={order.id} className="border rounded-lg p-4 hover:bg-secondary/10 transition-colors">
+                          <div className="flex flex-wrap justify-between items-start gap-4 mb-2">
+                            <div>
+                              <p className="text-sm text-muted-foreground">
+                                Order placed on {formatDate(order.created_at)}
+                              </p>
+                              <p className="font-medium">Order #{order.id.slice(0, 8)}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <div className="mb-1">{getStatusBadge(order.status)}</div>
+                              <p className="font-medium">{formatCurrency(order.total)}</p>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="mt-2 flex items-center"
+                            onClick={() => navigate(`/order-confirmation/${order.id}`)}
+                          >
+                            View Details
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-8">
