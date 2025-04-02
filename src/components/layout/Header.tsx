@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Heart, User, ShoppingCart } from 'lucide-react';
-import { useAuth, useCart } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -29,8 +29,7 @@ const categories = [
 
 const Header = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { cart } = useCart();
+  const { user, cart } = useApp();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
@@ -184,9 +183,9 @@ const Header = () => {
                   onSelect={() => handleSearchSelect(product.id)}
                 >
                   <div className="flex items-center">
-                    {product.image && (
+                    {product.image_url && (
                       <img 
-                        src={product.image} 
+                        src={product.image_url} 
                         alt={product.name}
                         className="w-10 h-10 object-cover rounded mr-3"
                       />
