@@ -1,6 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
+import { Session } from '@supabase/supabase-js';
 
 export type Product = {
   id: string;
@@ -44,6 +46,7 @@ type AppContextType = {
   clearCart: () => void;
   cartTotal: number;
   totalItems: number;
+  session: Session | null;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -53,22 +56,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [session, setSession] = useState<Session | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up auth state change listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        console.log('Auth state changed:', event, newSession?.user?.id);
+        setSession(newSession);
+        
+        if (newSession?.user) {
+          setUser({
+            id: newSession.user.id,
+            email: newSession.user.email || '',
+          });
+          
+          // Use setTimeout to avoid Supabase deadlocks
+          setTimeout(async () => {
+            try {
+              const { data: profileData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', newSession.user.id)
+                .single();
+                
+              if (profileData && !error) {
+                setProfile(profileData);
+              } else if (!error) {
+                await supabase.from('profiles').insert([
+                  { id: newSession.user.id, email: newSession.user.email }
+                ]);
+                
+                setProfile({
+                  id: newSession.user.id,
+                });
+              }
+            } catch (err) {
+              console.error('Error fetching profile:', err);
+            }
+          }, 0);
+        } else {
+          setUser(null);
+          setProfile(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log('Initial session:', initialSession?.user?.id);
+        
+        if (initialSession?.user) {
+          setSession(initialSession);
           setUser({
-            id: session.user.id,
-            email: session.user.email || '',
+            id: initialSession.user.id,
+            email: initialSession.user.email || '',
           });
           
           const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', initialSession.user.id)
             .single();
             
           if (profileData && !error) {
@@ -86,38 +137,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLoading(false);
       }
     };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          });
-          
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (profileData && !error) {
-            setProfile(profileData);
-          } else {
-            await supabase.from('profiles').insert([
-              { id: session.user.id, email: session.user.email }
-            ]);
-            
-            setProfile({
-              id: session.user.id,
-            });
-          }
-        } else {
-          setUser(null);
-          setProfile(null);
-        }
-      }
-    );
 
     initAuth();
 
@@ -252,6 +271,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearCart,
         cartTotal,
         totalItems,
+        session,
       }}
     >
       {children}

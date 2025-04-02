@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Heart, User, ShoppingCart } from 'lucide-react';
+import { Search, Heart, User, ShoppingCart, LogOut } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import {
   NavigationMenu,
@@ -13,10 +13,19 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { supabase } from '@/lib/supabase';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { signOut } from '@/lib/supabase';
+import { useToast } from '@/components/ui/use-toast';
 import { Product } from '@/context/AppContext';
 
 const categories = [
@@ -30,16 +39,17 @@ const categories = [
 const Header = () => {
   const navigate = useNavigate();
   const { user, cart } = useApp();
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { toast } = useToast();
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
   
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (query.length < 2) {
+    if (searchQuery.length < 2) {
       setSearchResults([]);
       return;
     }
@@ -48,12 +58,13 @@ const Header = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
         .eq('active', true)
         .limit(10);
         
       if (error) throw error;
       setSearchResults(data || []);
+      setIsSearchOpen(true);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -61,8 +72,31 @@ const Header = () => {
   };
 
   const handleSearchSelect = (productId: string) => {
-    setSearchOpen(false);
+    setIsSearchOpen(false);
     navigate(`/product/${productId}`);
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      navigate('/');
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
+    }
+  };
+
+  // Get first initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    return user.email?.charAt(0).toUpperCase() || 'U';
   };
 
   return (
@@ -116,15 +150,63 @@ const Header = () => {
 
           {/* Action Icons */}
           <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setSearchOpen(true)}
-              className="text-foreground" 
-              aria-label="Search"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
+            {/* Search */}
+            <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground"
+                  aria-label="Search"
+                >
+                  <Search className="h-5 w-5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <form onSubmit={handleSearch} className="flex items-center border-b p-2">
+                  <Search className="h-4 w-4 mr-2 flex-shrink-0 opacity-50" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <Button type="submit" variant="ghost" size="sm">
+                    Search
+                  </Button>
+                </form>
+                {searchResults.length > 0 && (
+                  <div className="max-h-[300px] overflow-auto p-2">
+                    {searchResults.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center p-2 hover:bg-muted rounded-md cursor-pointer"
+                        onClick={() => handleSearchSelect(product.id)}
+                      >
+                        {product.image_url && (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover rounded mr-3"
+                          />
+                        )}
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            ₹{product.price.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {searchQuery.length > 1 && searchResults.length === 0 && (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No results found.
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
             
             <Button
               variant="ghost"
@@ -136,15 +218,61 @@ const Header = () => {
               <Heart className="h-5 w-5" />
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(user ? '/profile' : '/login')}
-              className="text-foreground"
-              aria-label={user ? 'Account' : 'Sign in'}
-            >
-              <User className="h-5 w-5" />
-            </Button>
+            {/* User profile with dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-foreground relative"
+                  aria-label={user ? "Account" : "Sign in"}
+                >
+                  {user ? (
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {user ? (
+                  <>
+                    <div className="px-2 py-1.5">
+                      <p className="text-sm font-medium">{user.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <User className="mr-2 h-4 w-4" />
+                      My Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+                      <Heart className="mr-2 h-4 w-4" />
+                      My Wishlist
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/my-orders')}>
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      My Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate('/login')}>
+                      Sign in
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/register')}>
+                      Create account
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               variant="ghost"
@@ -163,46 +291,6 @@ const Header = () => {
           </div>
         </div>
       </div>
-
-      {/* Search Dialog */}
-      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <CommandInput 
-          placeholder="Search products..." 
-          value={searchQuery}
-          onValueChange={handleSearch}
-        />
-        <CommandList>
-          {searchQuery.length > 0 && searchResults.length === 0 && (
-            <CommandEmpty>No results found.</CommandEmpty>
-          )}
-          {searchResults.length > 0 && (
-            <CommandGroup heading="Products">
-              {searchResults.map((product) => (
-                <CommandItem 
-                  key={product.id}
-                  onSelect={() => handleSearchSelect(product.id)}
-                >
-                  <div className="flex items-center">
-                    {product.image_url && (
-                      <img 
-                        src={product.image_url} 
-                        alt={product.name}
-                        className="w-10 h-10 object-cover rounded mr-3"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        ₹{product.price.toLocaleString('en-IN')}
-                      </p>
-                    </div>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-        </CommandList>
-      </CommandDialog>
     </header>
   );
 };

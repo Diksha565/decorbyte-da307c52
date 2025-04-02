@@ -37,20 +37,32 @@ export const signOut = async () => {
 };
 
 // Database interactions
-export const getProductsByCategory = async (category: string) => {
-  const { data, error } = await supabase
+export const getProductsByCategory = async (category: string, inStockOnly: boolean = false) => {
+  let query = supabase
     .from('products')
     .select('*')
     .eq('category', category)
     .eq('active', true);
+    
+  if (inStockOnly) {
+    query = query.gt('inventory', 0);
+  }
+  
+  const { data, error } = await query;
   return { data, error };
 };
 
-export const getAllProducts = async () => {
-  const { data, error } = await supabase
+export const getAllProducts = async (inStockOnly: boolean = false) => {
+  let query = supabase
     .from('products')
     .select('*')
     .eq('active', true);
+    
+  if (inStockOnly) {
+    query = query.gt('inventory', 0);
+  }
+  
+  const { data, error } = await query;
   return { data, error };
 };
 

@@ -17,6 +17,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { toast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const isOutOfStock = product.inventory <= 0;
 
@@ -82,16 +83,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
-    <div className="product-card group animate-fade-in">
+    <div className="product-card group animate-fade-in border rounded-md overflow-hidden bg-white hover:shadow-md transition-shadow">
       {/* Product image */}
       <Link to={`/product/${product.id}`} className="block">
-        <div className="product-image-container">
-          <img 
-            src={product.image_url}
-            alt={product.name}
-            className="product-image"
-          />
+        <div className="aspect-square overflow-hidden bg-secondary/20">
+          {!imageError ? (
+            <img 
+              src={product.image_url}
+              alt={product.name}
+              className="w-full h-full object-cover transition-transform hover:scale-105"
+              onError={handleImageError}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+              No image available
+            </div>
+          )}
         </div>
       </Link>
 
