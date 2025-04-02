@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Heart, User, ShoppingCart, LogOut } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase'; // Import supabase client
 import {
   NavigationMenu,
   NavigationMenuContent,
