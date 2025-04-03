@@ -101,32 +101,52 @@ export const createOrder = async (orderData: any) => {
   return { data, error };
 };
 
-// Update the createOrderItems function to handle inventory updates
+// Fixed createOrderItems function to properly update inventory
 export const createOrderItems = async (orderItems: any[]) => {
+  // First insert the order items
   const { data, error } = await supabase
     .from('order_items')
     .insert(orderItems);
     
   // If order items were successfully created, update product inventory
   if (!error && orderItems.length > 0) {
+    console.log('Updating inventory for', orderItems.length, 'products');
+    
     // For each item, reduce the inventory
     for (const item of orderItems) {
-      // Get current product
-      const { data: product } = await supabase
-        .from('products')
-        .select('inventory')
-        .eq('id', item.product_id)
-        .single();
-      
-      if (product) {
-        // Calculate new inventory
-        const newInventory = Math.max(0, product.inventory - item.quantity);
-        
-        // Update inventory
-        await supabase
+      try {
+        // Get current product
+        const { data: product, error: productError } = await supabase
           .from('products')
-          .update({ inventory: newInventory })
-          .eq('id', item.product_id);
+          .select('inventory')
+          .eq('id', item.product_id)
+          .single();
+        
+        if (productError) {
+          console.error('Error fetching product:', productError);
+          continue;
+        }
+        
+        if (product) {
+          console.log(`Updating product ${item.product_id}: Current inventory: ${product.inventory}, Ordered: ${item.quantity}`);
+          
+          // Calculate new inventory
+          const newInventory = Math.max(0, product.inventory - item.quantity);
+          
+          // Update inventory
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ inventory: newInventory })
+            .eq('id', item.product_id);
+          
+          if (updateError) {
+            console.error('Error updating inventory:', updateError);
+          } else {
+            console.log(`Inventory updated to ${newInventory} for product ${item.product_id}`);
+          }
+        }
+      } catch (err) {
+        console.error('Error in inventory update process:', err);
       }
     }
   }

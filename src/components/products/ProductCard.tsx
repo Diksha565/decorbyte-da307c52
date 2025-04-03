@@ -87,17 +87,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setImageError(true);
   };
 
-  // Fallback images for different categories
+  // Improved fallback images for all categories
   const getFallbackImage = () => {
     const fallbacks = {
       furniture: '/lovable-uploads/ac4decf7-36a9-4f60-9b53-3b5aaec7ddd5.png',
-      lighting: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=800&h=600&q=80',
-      showpieces: 'https://images.unsplash.com/photo-1585412727339-54e4bae3bbf9?auto=format&fit=crop&w=800&h=600&q=80',
-      decor: 'https://images.unsplash.com/photo-1499955085172-a104c9463ece?auto=format&fit=crop&w=800&h=600&q=80',
-      wallpapers: 'https://images.unsplash.com/photo-1557683311-eac922347aa1?auto=format&fit=crop&w=800&h=600&q=80'
+      lighting: '/lovable-uploads/91c22940-26e7-4352-a866-a85a9c700593.png',
+      showpieces: '/lovable-uploads/2c9e87ae-3272-4df6-aa72-ef972aa66036.png',
+      decor: '/lovable-uploads/c2bdfd29-4c1d-4f43-bd12-1cf7ee0e6e7d.png',
+      wallpapers: '/lovable-uploads/bd4a3af5-d02e-4af3-851f-4af7110e3bf1.png'
     };
     
-    return fallbacks[product.category] || '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
+    // Return category-specific fallback or default fallback
+    return fallbacks[product.category.toLowerCase()] || '/lovable-uploads/9e4b232b-6972-44b4-958a-2bea5a83db4e.png';
   };
 
   return (
