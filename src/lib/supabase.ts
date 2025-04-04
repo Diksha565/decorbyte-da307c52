@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 
 // Import the client configuration from our integration file
@@ -108,8 +107,13 @@ export const createOrderItems = async (orderItems: any[]) => {
     .from('order_items')
     .insert(orderItems);
     
+  if (error) {
+    console.error('Error creating order items:', error);
+    return { data, error };
+  }
+    
   // If order items were successfully created, update product inventory
-  if (!error && orderItems.length > 0) {
+  if (orderItems.length > 0) {
     console.log('Updating inventory for', orderItems.length, 'products');
     
     // For each item, reduce the inventory
@@ -128,10 +132,8 @@ export const createOrderItems = async (orderItems: any[]) => {
         }
         
         if (product) {
-          console.log(`Updating product ${item.product_id}: Current inventory: ${product.inventory}, Ordered: ${item.quantity}`);
-          
-          // Calculate new inventory
           const newInventory = Math.max(0, product.inventory - item.quantity);
+          console.log(`Updating product ${item.product_id}: Current inventory: ${product.inventory}, Ordered: ${item.quantity}, New inventory: ${newInventory}`);
           
           // Update inventory
           const { error: updateError } = await supabase
@@ -142,7 +144,7 @@ export const createOrderItems = async (orderItems: any[]) => {
           if (updateError) {
             console.error('Error updating inventory:', updateError);
           } else {
-            console.log(`Inventory updated to ${newInventory} for product ${item.product_id}`);
+            console.log(`Inventory successfully updated to ${newInventory} for product ${item.product_id}`);
           }
         }
       } catch (err) {
